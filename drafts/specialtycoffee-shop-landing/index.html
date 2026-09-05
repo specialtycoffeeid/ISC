@@ -112,7 +112,6 @@ p{margin:0}
 ul,ol{margin:0;padding:0;list-style:none}
 a{color:var(--brand-soft);text-underline-offset:3px}
 a:hover{color:var(--brand-bright)}
-table{border-collapse:collapse;width:100%}
 button{font:inherit;color:inherit}
 
 :where(a,button,input,select,textarea,summary,[tabindex]):focus-visible{
@@ -125,7 +124,10 @@ button{font:inherit;color:inherit}
   html{scroll-behavior:auto}
   *,*::before,*::after{
     animation-duration:.001ms!important;animation-iteration-count:1!important;
-    transition-duration:.001ms!important;scroll-behavior:auto!important;
+    animation-delay:0s!important;                 /* else a staggered reveal
+       leaves content blank for the length of its delay before it appears */
+    transition-duration:.001ms!important;transition-delay:0s!important;
+    scroll-behavior:auto!important;
   }
 }
 
@@ -432,31 +434,180 @@ button{font:inherit;color:inherit}
 }
 .mini-stats span{font-size:.875rem;color:var(--text-muted)}
 
-/* ==========================================================================
-   10. BEFORE / AFTER
-   ========================================================================== */
-.split{display:grid;gap:var(--space-6)}
-@media (min-width:1024px){.split{grid-template-columns:1.15fr .85fr;gap:var(--space-7);align-items:start}}
-.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:var(--radius-lg)}
-.tablewrap table{min-width:34rem;font-size:.9375rem}
-caption{
-  text-align:left;padding:var(--space-4) var(--space-5);
-  font-family:var(--font-display);font-size:1.125rem;text-transform:uppercase;
-  border-bottom:1px solid var(--border);color:var(--danger);
-}
-th,td{padding:var(--space-4) var(--space-5);text-align:left;vertical-align:top;border-bottom:1px solid var(--border)}
-tbody tr:last-child td,tbody tr:last-child th{border-bottom:0}
-th[scope="col"]{font-size:.6875rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);font-weight:700}
-th[scope="row"]{font-weight:600;white-space:nowrap}
-td .flag{color:var(--danger);font-weight:600}
 
-.after{background:linear-gradient(160deg,rgba(46,125,58,.16),var(--surface));border:1px solid var(--brand-strong);border-radius:var(--radius-lg);padding:var(--space-5)}
-.after__tag{
-  display:inline-flex;align-items:center;gap:var(--space-2);
-  font-size:.6875rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
-  color:var(--brand-soft);margin-bottom:var(--space-4);
+
+/* ==========================================================================
+   10. CONVERGENCE DIAGRAM  (four listings -> one verified lot)
+   Animation is opt-in: JS adds .is-live when the diagram scrolls into view.
+   Without JS, or under prefers-reduced-motion, every element renders in its
+   final state — nothing is hidden behind an animation that may never run.
+   ========================================================================== */
+.flow{position:relative;display:grid;gap:var(--space-5)}
+@media (min-width:1024px){
+  .flow{grid-template-columns:1fr .9fr 1fr;gap:0;align-items:center;min-height:400px}
 }
-.after h3{font-size:1.375rem;margin-bottom:var(--space-4)}
+
+/* --- connectors --- */
+.wires{display:none}
+@media (min-width:1024px){
+  .wires{
+    display:block;position:absolute;inset:0;width:100%;height:100%;
+    z-index:0;pointer-events:none;color:var(--brand-strong);
+  }
+}
+.wire{stroke:#2B3A2A;stroke-width:1.5}
+.spark{stroke:var(--brand-bright);stroke-width:2;opacity:0}
+.nodes{opacity:0}
+
+.is-live .wire{
+  stroke-dasharray:300;stroke-dashoffset:300;
+  animation:wire-draw .9s var(--ease) forwards;
+}
+.is-live .wire--out{animation-delay:.45s}
+.is-live .nodes{animation:fade-in .5s var(--ease) .8s forwards}
+.is-live .spark{
+  stroke-dasharray:16 999;
+  animation:spark-run 1.9s var(--ease) var(--d) infinite;
+}
+@keyframes wire-draw{to{stroke-dashoffset:0}}
+@keyframes fade-in{to{opacity:1}}
+@keyframes spark-run{
+  0%{stroke-dashoffset:16;opacity:0}
+  12%{opacity:1}
+  85%{opacity:1}
+  100%{stroke-dashoffset:-280;opacity:0}
+}
+
+/* --- column labels --- */
+.flow__label{
+  font-family:var(--font-body);font-size:.6875rem;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--alert);
+  margin-bottom:var(--space-4);
+}
+.flow__label--good{color:var(--brand-soft)}
+.flow__col{position:relative;z-index:1;min-width:0}
+
+/* --- source cards --- */
+.sources{display:grid;gap:var(--space-3)}
+@media (min-width:1024px){
+  .flow__col:first-of-type{padding-right:var(--space-5)}
+  .sources{gap:var(--space-4)}
+}
+.src{
+  padding:var(--space-4);background:var(--surface-2);
+  border:1px solid var(--border);border-left:2px solid #6B5426;
+  border-radius:var(--radius);
+}
+.src__sys{
+  font-size:.625rem;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--text-muted);margin-bottom:var(--space-2);
+}
+.src__val{
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  font-size:.8125rem;letter-spacing:.01em;overflow-wrap:anywhere;
+}
+.src__flag{
+  margin-top:var(--space-2);font-size:.75rem;font-weight:600;color:var(--alert);
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+.is-live .src{animation:slide-in .55s var(--ease) backwards;animation-delay:calc(var(--i)*110ms)}
+@keyframes slide-in{from{opacity:0;transform:translateX(-14px)}}
+
+/* --- hub --- */
+.flow__hub{
+  position:relative;z-index:1;display:grid;justify-items:center;
+  gap:var(--space-4);padding-block:var(--space-7);
+}
+@media (min-width:1024px){.flow__hub{padding-block:var(--space-5)}}
+
+/* vertical connectors, for the stacked layout only */
+.flow__hub::before,.flow__hub::after{
+  content:"";position:absolute;left:50%;width:2px;height:var(--space-6);
+  transform:translateX(-50%);border-radius:2px;
+  background-image:linear-gradient(180deg,#2B3A2A 0 38%,var(--brand-bright) 50%,#2B3A2A 62% 100%);
+  background-size:100% 300%;background-position:0 0;
+}
+.flow__hub::before{top:var(--space-2)}
+.flow__hub::after{bottom:var(--space-2)}
+.is-live .flow__hub::before,.is-live .flow__hub::after{animation:drip 2s linear infinite}
+.is-live .flow__hub::after{animation-delay:.4s}
+@keyframes drip{to{background-position:0 100%}}
+@media (min-width:1024px){.flow__hub::before,.flow__hub::after{display:none}}
+
+.hub__core{position:relative;display:grid;place-items:center}
+.hub__glow{
+  position:absolute;top:50%;left:50%;width:250px;height:250px;
+  transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(111,211,126,.30),rgba(111,211,126,0) 68%);
+}
+.is-live .hub__glow{animation:breathe 3.4s var(--ease) 1s infinite}
+@keyframes breathe{50%{opacity:.55;transform:translate(-50%,-50%) scale(1.1)}}
+.hub__art{width:min(215px,54vw);height:auto;filter:drop-shadow(0 12px 26px rgba(0,0,0,.6))}
+.is-live .hub__layer{
+  animation:stack-up .6s var(--ease) backwards;
+  animation-delay:calc(600ms + (3 - var(--i))*130ms);
+}
+@keyframes stack-up{from{opacity:0;transform:translateY(16px)}}
+
+.hub__steps{
+  display:inline-grid;gap:var(--space-2);padding-left:var(--space-4);
+  border-left:1px solid var(--border);justify-self:center;
+}
+.hub__steps li{
+  position:relative;font-size:.6875rem;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--text-muted);
+}
+.hub__steps li::before{
+  content:"";position:absolute;left:calc(-1 * var(--space-4) - 1px);top:50%;
+  width:9px;height:1.5px;background:var(--brand-bright);
+}
+.is-live .hub__steps li{animation:fade-in .5s var(--ease) backwards;animation-delay:calc(1.5s + var(--i)*140ms)}
+
+/* --- result --- */
+.result{
+  background:linear-gradient(160deg,rgba(46,125,58,.16),var(--surface));
+  border:1px solid var(--brand-strong);border-radius:var(--radius-lg);
+  padding:var(--space-5);
+}
+@media (min-width:1024px){.flow__col:last-of-type{padding-left:var(--space-5)}}
+.result__title{
+  font-family:var(--font-display);font-size:1.125rem;text-transform:uppercase;
+  font-weight:700;padding-bottom:var(--space-4);margin-bottom:var(--space-2);
+  border-bottom:1px solid var(--border);
+}
+.result__rows{display:grid}
+.result__row{
+  display:grid;grid-template-columns:1fr auto;gap:var(--space-1) var(--space-4);
+  align-items:baseline;padding-block:var(--space-4);
+  border-bottom:1px solid var(--border);
+}
+.result__row:last-child{border-bottom:0}
+.result__row dt{
+  grid-column:1;font-size:.625rem;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--text-muted);
+}
+.result__row dd{
+  grid-column:1;margin:0;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  font-size:.875rem;overflow-wrap:anywhere;
+}
+.result__row .tag{
+  grid-column:2;grid-row:1 / span 2;align-self:center;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  font-size:.75rem;color:var(--brand-soft);white-space:nowrap;
+}
+.is-live .result__row{animation:slide-in-r .55s var(--ease) backwards;animation-delay:calc(1.9s + var(--i)*130ms)}
+@keyframes slide-in-r{from{opacity:0;transform:translateX(14px)}}
+
+/* Reduced motion: show the finished diagram, run nothing.
+   (The global reduce block already collapses durations; this removes the
+   looping spark and the breathing glow outright rather than flickering them.) */
+@media (prefers-reduced-motion:reduce){
+  .is-live .spark{animation:none;opacity:0}
+  .is-live .hub__glow{animation:none}
+  .is-live .flow__hub::before,.is-live .flow__hub::after{animation:none}
+  .is-live .wire{stroke-dashoffset:0}
+  .nodes,.is-live .nodes{opacity:1}
+}
 
 /* ==========================================================================
    11. USE-CASE CARDS
@@ -933,60 +1084,111 @@ td .flag{color:var(--danger);font-weight:600}
         </p>
       </header>
 
-      <div class="split">
-        <div class="tablewrap">
-          <table>
-            <caption>Before — the same coffee, four descriptions</caption>
-            <thead>
-              <tr>
-                <th scope="col">Seller</th>
-                <th scope="col">How it is listed</th>
-                <th scope="col">What is missing</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th scope="row">Marketplace</th>
-                <td>"Arabica Bali, premium grade"</td>
-                <td class="flag">No farm, no lot number</td>
-              </tr>
-              <tr>
-                <th scope="row">Broker</th>
-                <td>"Kintamani washed, 1,400 masl"</td>
-                <td class="flag">Crop year unstated</td>
-              </tr>
-              <tr>
-                <th scope="row">Reseller</th>
-                <td>"Bali Kintamani, score 86"</td>
-                <td class="flag">Moisture never measured</td>
-              </tr>
-              <tr>
-                <th scope="row">Social seller</th>
-                <td>"Specialty grade, direct trade"</td>
-                <td class="flag">Score self-declared</td>
-              </tr>
-            </tbody>
-          </table>
+      <div class="flow" data-flow>
+
+        <!-- decorative connectors; stretched to the container, constant stroke -->
+        <svg class="wires" viewBox="0 0 1000 400" preserveAspectRatio="none"
+             aria-hidden="true" focusable="false">
+          <g fill="none" stroke-linecap="round" vector-effect="non-scaling-stroke">
+            <path class="wire" d="M336 64C426 64 430 156 500 156"/>
+            <path class="wire" d="M336 162C426 162 430 156 500 156"/>
+            <path class="wire" d="M336 260C426 260 430 156 500 156"/>
+            <path class="wire" d="M336 358C426 358 430 156 500 156"/>
+            <path class="wire wire--out" d="M500 156H670"/>
+
+            <path class="spark" style="--d:0ms"   d="M336 64C426 64 430 156 500 156"/>
+            <path class="spark" style="--d:420ms" d="M336 162C426 162 430 156 500 156"/>
+            <path class="spark" style="--d:840ms" d="M336 260C426 260 430 156 500 156"/>
+            <path class="spark" style="--d:1260ms" d="M336 358C426 358 430 156 500 156"/>
+            <path class="spark spark--out" style="--d:1700ms" d="M500 156H670"/>
+          </g>
+          <g class="nodes" fill="currentColor">
+            <circle cx="336" cy="64" r="4"/><circle cx="336" cy="162" r="4"/>
+            <circle cx="336" cy="260" r="4"/><circle cx="336" cy="358" r="4"/>
+            <circle cx="670" cy="156" r="4"/>
+          </g>
+        </svg>
+
+        <!-- ---------- inputs ---------- -->
+        <div class="flow__col">
+          <h3 class="flow__label">Today, on the market</h3>
+          <ul class="sources">
+            <li class="src" style="--i:0">
+              <p class="src__sys">Marketplace</p>
+              <p class="src__val">ARABICA BALI, PREMIUM GRADE</p>
+              <p class="src__flag">no farm named</p>
+            </li>
+            <li class="src" style="--i:1">
+              <p class="src__sys">Broker</p>
+              <p class="src__val">KINTAMANI WASHED 1,400 MASL</p>
+              <p class="src__flag">crop year unstated</p>
+            </li>
+            <li class="src" style="--i:2">
+              <p class="src__sys">Reseller</p>
+              <p class="src__val">BALI KINTAMANI, SCORE 86</p>
+              <p class="src__flag">moisture unmeasured</p>
+            </li>
+            <li class="src" style="--i:3">
+              <p class="src__sys">Social seller</p>
+              <p class="src__val">SPECIALTY GRADE, DIRECT TRADE</p>
+              <p class="src__flag">score self-declared</p>
+            </li>
+          </ul>
         </div>
 
-        <div class="after">
-          <p class="after__tag">
-            <svg width="15" height="15" viewBox="0 0 15 15" aria-hidden="true" focusable="false"><path d="M4 7.8l2.2 2.1L11 5.2" stroke="#7FD68C" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            After — one verified record
-          </p>
-          <h3>Lot BK-2417</h3>
-          <dl class="spec" style="margin-top:0">
-            <div><dt>Farm / mill</dt><dd>Named producer group, Bangli</dd></div>
-            <div><dt>Crop year</dt><dd>2026 harvest</dd></div>
-            <div><dt>Process</dt><dd>Fully washed</dd></div>
-            <div><dt>Altitude</dt><dd>1,350–1,550 masl</dd></div>
-            <div><dt>Cup score</dt><dd>86.5, cupped twice</dd></div>
-            <div><dt>Moisture</dt><dd>11.2%, measured</dd></div>
-          </dl>
-          <p style="margin-top:1.5rem;color:var(--text-muted);font-size:.9375rem">
-            One lot number. One document set. The same record whether you buy 1 kg or 19 tonnes.
-          </p>
-          <p class="card__caption">Illustrative record based on our standard lot sheet.</p>
+        <!-- ---------- hub ---------- -->
+        <div class="flow__hub">
+          <span class="hub__core">
+          <span class="hub__glow" aria-hidden="true"></span>
+          <svg class="hub__art" viewBox="22 44 156 112" aria-hidden="true" focusable="false">
+            <defs>
+              <linearGradient id="sack" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#8FE39C"/><stop offset="1" stop-color="#2E7D3A"/>
+              </linearGradient>
+            </defs>
+            <g class="hub__layer" style="--i:3"><path d="M100 150 30 130l70-24 70 24z" fill="#1E5527"/></g>
+            <g class="hub__layer" style="--i:2"><path d="M100 132 30 112l70-24 70 24z" fill="#26682F"/></g>
+            <g class="hub__layer" style="--i:1"><path d="M100 114 30 94l70-24 70 24z" fill="#2E7D3A"/></g>
+            <g class="hub__layer" style="--i:0">
+              <path d="M100 96 30 76l70-24 70 24z" fill="url(#sack)"/>
+              <!-- coffee bean sitting on the isometric top face -->
+              <ellipse cx="100" cy="71" rx="17" ry="9" fill="#14401B"/>
+              <ellipse cx="100" cy="71" rx="17" ry="9" fill="none" stroke="#0D2E13" stroke-width="1.2"/>
+              <path d="M86 73.5c5-5.5 9 3 14-1.5s8 2.5 14-3"
+                    stroke="#9BE8A7" stroke-width="2" fill="none"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+          </svg>
+          </span>
+          <ol class="hub__steps">
+            <li style="--i:0">Cupped</li>
+            <li style="--i:1">Measured</li>
+            <li style="--i:2">Documented</li>
+            <li style="--i:3">Traced</li>
+          </ol>
+        </div>
+
+        <!-- ---------- output ---------- -->
+        <div class="flow__col">
+          <h3 class="flow__label flow__label--good">What you get back</h3>
+          <article class="result">
+            <p class="result__title">One lot you can trust</p>
+            <dl class="result__rows">
+              <div class="result__row" style="--i:0">
+                <dt>Bali Kintamani</dt><dd>Lot BK-2417</dd><p class="tag">traced</p>
+              </div>
+              <div class="result__row" style="--i:1">
+                <dt>Producer group</dt><dd>Bangli, Bali</dd><p class="tag">named</p>
+              </div>
+              <div class="result__row" style="--i:2">
+                <dt>Cup score</dt><dd>86.5 SCA</dd><p class="tag">cupped 2&times;</p>
+              </div>
+              <div class="result__row" style="--i:3">
+                <dt>Moisture</dt><dd>11.2%, 2026 crop</dd><p class="tag">measured</p>
+              </div>
+            </dl>
+            <p class="card__caption">Illustrative record based on our standard lot sheet.</p>
+          </article>
         </div>
       </div>
     </div>
@@ -1538,6 +1740,69 @@ td .flag{color:var(--danger);font-weight:600}
         document.getElementById(btn.getAttribute("aria-controls")).hidden = false;
       }
     });
+  }
+
+  /* ---- connector geometry: derive paths from where the cards actually are,
+     so the wires stay attached when the layout reflows or copy changes ---- */
+  function layoutWires() {
+    var flow = document.querySelector("[data-flow]");
+    if (!flow) return;
+    var svg = flow.querySelector(".wires");
+    if (!svg || getComputedStyle(svg).display === "none") return;
+
+    var F = flow.getBoundingClientRect();
+    if (!F.width || !F.height) return;
+    var vx = function (x) { return (x - F.left) / F.width * 1000; };
+    var vy = function (y) { return (y - F.top) / F.height * 400; };
+
+    var art = flow.querySelector(".hub__art").getBoundingClientRect();
+    var hx = vx(art.left + art.width / 2), hy = vy(art.top + art.height / 2);
+
+    var wires  = flow.querySelectorAll(".wire:not(.wire--out)");
+    var sparks = flow.querySelectorAll(".spark:not(.spark--out)");
+    var nodes  = flow.querySelectorAll(".nodes circle");
+
+    Array.prototype.forEach.call(flow.querySelectorAll(".src"), function (card, i) {
+      var r = card.getBoundingClientRect();
+      var x = vx(r.right) + 12, y = vy(r.top + r.height / 2);
+      var d = "M" + x + " " + y + "C" + (x + 90) + " " + y + " " + (hx - 70) + " " + hy + " " + hx + " " + hy;
+      if (wires[i])  wires[i].setAttribute("d", d);
+      if (sparks[i]) sparks[i].setAttribute("d", d);
+      if (nodes[i]) { nodes[i].setAttribute("cx", x); nodes[i].setAttribute("cy", y); }
+    });
+
+    var res = flow.querySelector(".result").getBoundingClientRect();
+    var rx = vx(res.left) - 6;
+    var od = "M" + hx + " " + hy + "H" + rx;
+    flow.querySelector(".wire--out").setAttribute("d", od);
+    flow.querySelector(".spark--out").setAttribute("d", od);
+    if (nodes[4]) { nodes[4].setAttribute("cx", rx); nodes[4].setAttribute("cy", hy); }
+  }
+
+  layoutWires();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutWires);
+  var wireTimer;
+  window.addEventListener("resize", function () {
+    clearTimeout(wireTimer);
+    wireTimer = setTimeout(layoutWires, 150);   /* debounced, not per frame */
+  });
+
+  /* ---- convergence diagram: start animating once it is on screen ---- */
+  var flow = document.querySelector("[data-flow]");
+  if (flow) {
+    if (!("IntersectionObserver" in window)) {
+      flow.classList.add("is-live");           /* no observer: just show it */
+    } else {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-live");
+            io.unobserve(entry.target);        /* animate once, not on every pass */
+          }
+        });
+      }, { threshold: 0.25 });
+      io.observe(flow);
+    }
   }
 
   /* ---- hero form: inline error + status, no silent failure ---- */
